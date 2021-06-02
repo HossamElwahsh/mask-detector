@@ -8,7 +8,26 @@ import imutils
 import time
 import cv2
 import os
+import RPi.GPIO as GPIO
 
+# Pins
+ready = 8
+faceRead = 5    # yellow
+maskOn = 7      # green
+maskOff = 3     # red
+
+# GPIO Setup
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup(ready, GPIO.OUT)
+GPIO.setup(faceRead, GPIO.OUT)
+GPIO.setup(maskOn, GPIO.OUT)
+GPIO.setup(maskOff, GPIO.OUT)
+
+GPIO.output(faceRead, GPIO.LOW)
+GPIO.output(maskOn, GPIO.LOW)
+GPIO.output(maskOff, GPIO.LOW)
+
+readyLEDStatus = 0
 
 def detect_and_predict_mask(frame, faceNet, maskNet):
     # grab the dimensions of the frame and then construct a blob
@@ -68,13 +87,32 @@ def detect_and_predict_mask(frame, faceNet, maskNet):
         # for faster inference we'll make batch predictions on *all*
         # faces at the same time rather than one-by-one predictions
         # in the above `for` loop
+        GPIO.output(faceRead, GPIO.HIGH)
+        # GPIO.output(maskOn, GPIO.LOW)
+        # GPIO.output(maskOff, GPIO.LOW)
+
         faces = np.array(faces, dtype="float32")
         preds = maskNet.predict(faces, batch_size=32)
+    else:
+        GPIO.output(faceRead, GPIO.LOW)
+        GPIO.output(maskOn, GPIO.LOW)
+        GPIO.output(maskOff, GPIO.LOW)
 
     # return a 2-tuple of the face locations and their corresponding
     # locations
     return (locs, preds)
 
+
+# toggle function for read LED
+def toggleReadLed(LEDStatus):
+    if(LEDStatus == 0):
+        LEDStatus = 1
+        GPIO.output(ready, GPIO.HIGH)
+    else:
+        LEDStatus = 0
+        GPIO.output(ready, GPIO.LOW)
+
+    return LEDStatus
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -106,10 +144,12 @@ time.sleep(2.0)
 
 # loop over the frames from the video stream
 while True:
+    readyLEDStatus = toggleReadLed(readyLEDStatus)
+
     # grab the frame from the threaded video stream and resize it
     # to have a maximum width of 400 pixels
     frame = vs.read()
-    frame = imutils.resize(frame, width=500)
+    frame = imutils.resize(frame, width=400)
 
     # detect faces in the frame and determine if they are wearing a
     # face mask or not
@@ -124,7 +164,18 @@ while True:
 
         # Parsing predicted percentage
         label = "Mask" if mask > withoutMask else "No Mask"
-        color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
+        # color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
+        if(label == "Mask"):
+            color = (0, 255, 0)
+            GPIO.output(faceRead, GPIO.LOW)
+            GPIO.output(maskOn, GPIO.HIGH)
+            GPIO.output(maskOff, GPIO.LOW)
+        else:
+            color = (0, 0, 255)
+            GPIO.output(faceRead, GPIO.LOW)
+            GPIO.output(maskOff, GPIO.HIGH)
+            GPIO.output(maskOn, GPIO.LOW)
+
 
         # include the probability in the label
         label = "{}: {:.2f}%".format(label, max(mask, withoutMask) * 100)
@@ -138,11 +189,12 @@ while True:
     # show the output frame
     cv2.imshow("Face Mask Detector", frame)
     key = cv2.waitKey(1) & 0xFF
-
+    time.sleep(0.3)
     # if the `q` key was pressed, break from the loop
     if key == ord("q"):
         break
 
 # cleanup
+GPIO.cleanup()
 cv2.destroyAllWindows()
 vs.stop()
