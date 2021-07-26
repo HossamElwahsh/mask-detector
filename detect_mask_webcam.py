@@ -62,8 +62,8 @@ def detect_and_predict_mask(frame, faceNet, maskNet):
 
             # ensure the bounding boxes fall within the dimensions of
             # the frame
-            (startX, startY) = (max(0, startX), max(0, startY))
-            (endX, endY) = (min(w - 1, endX), min(h - 1, endY))
+            #(startX, startY) = (max(0, startX), max(0, startY))
+            #(endX, endY) = (min(w - 1, endX), min(h - 1, endY))
 
             # extract the face ROI, convert it from BGR to RGB channel
             # ordering, resize it to 224x224, and preprocess it
@@ -184,12 +184,12 @@ while True:
         # frame
         cv2.putText(frame, label, (startX - 50, startY - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-        cv2.rectangle(frame, (startX, startY), (endX, endY), color, 2)
+        #cv2.rectangle(frame, (startX, startY), (endX, endY), color, 2)
 
     # show the output frame
     cv2.imshow("Face Mask Detector", frame)
     key = cv2.waitKey(1) & 0xFF
-    time.sleep(0.3)
+    time.sleep(0.1)
     # if the `q` key was pressed, break from the loop
     if key == ord("q"):
         break
