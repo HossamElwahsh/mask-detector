@@ -9,25 +9,74 @@ import time
 import cv2
 import os
 import RPi.GPIO as GPIO
+from time import sleep
 
-# Pins
-ready = 8
-faceRead = 5    # yellow
-maskOn = 7      # green
-maskOff = 3     # red
+# Pins in GPIO.BOARD
+# ready = 8
+# faceRead = 5    # yellow
+# maskOn = 7      # green
+# maskOff = 3     # red
+
+# Pins in GPIO.BCM
+ready = 14
+faceRead = 3    # yellow
+maskOn = 4      # green
+maskOff = 2     # red
+
+# Pins for Motor Driver Inputs in GPIO.BCM
+Motor1A = 23
+Motor1B = 24
+Motor1E = 25
 
 # GPIO Setup
-GPIO.setmode(GPIO.BOARD)
+GPIO.setmode(GPIO.BCM)
+
+#setup
 GPIO.setup(ready, GPIO.OUT)
 GPIO.setup(faceRead, GPIO.OUT)
 GPIO.setup(maskOn, GPIO.OUT)
 GPIO.setup(maskOff, GPIO.OUT)
+# ------------------------------
+GPIO.setup(Motor1A, GPIO.OUT)   # All pins as Outputs
+GPIO.setup(Motor1B, GPIO.OUT)
+GPIO.setup(Motor1E, GPIO.OUT)
 
+# startup output
 GPIO.output(faceRead, GPIO.LOW)
 GPIO.output(maskOn, GPIO.LOW)
 GPIO.output(maskOff, GPIO.LOW)
+# ------------------------------
+GPIO.output(Motor1A, GPIO.LOW)
+GPIO.output(Motor1B, GPIO.LOW)
+GPIO.output(Motor1E, GPIO.LOW)
 
+lastMaskStatus = 0      # Used to prevent duplicate door open/close
 readyLEDStatus = 0
+doorIsOpen = 0          # 0: Closed, 1: Open
+
+def doorControl(open):
+    global doorIsOpen
+    if open and not doorIsOpen:
+
+        print('Door opening\n')
+        # Going forwards
+        GPIO.output(Motor1A, GPIO.HIGH)
+        GPIO.output(Motor1B, GPIO.LOW)
+        GPIO.output(Motor1E, GPIO.HIGH)
+        sleep(2)
+        print('Opened\n')
+        GPIO.output(Motor1E, GPIO.LOW)
+        doorIsOpen = 1
+
+    elif not open and doorIsOpen:
+        print('Door closing\n')
+        GPIO.output(Motor1A, GPIO.LOW)
+        GPIO.output(Motor1B, GPIO.HIGH)
+        GPIO.output(Motor1E, GPIO.HIGH)
+        print('Closed\n')
+        GPIO.output(Motor1E, GPIO.LOW)
+        doorIsOpen = 0
+    return
 
 def detect_and_predict_mask(frame, faceNet, maskNet):
     # grab the dimensions of the frame and then construct a blob
@@ -98,6 +147,10 @@ def detect_and_predict_mask(frame, faceNet, maskNet):
         GPIO.output(maskOn, GPIO.LOW)
         GPIO.output(maskOff, GPIO.LOW)
 
+        # check if door is open
+        if doorIsOpen:
+            doorControl(0)  # close the door
+
     # return a 2-tuple of the face locations and their corresponding
     # locations
     return (locs, preds)
@@ -157,6 +210,7 @@ while True:
 
     # loop over the detected face locations and their corresponding
     # locations
+    allHaveMask = -1
     for (box, pred) in zip(locs, preds):
         # unpack the bounding box and predictions
         (startX, startY, endX, endY) = box
@@ -170,11 +224,14 @@ while True:
             GPIO.output(faceRead, GPIO.LOW)
             GPIO.output(maskOn, GPIO.HIGH)
             GPIO.output(maskOff, GPIO.LOW)
+            if(allHaveMask != 0):
+                allHaveMask = 1
         else:
             color = (0, 0, 255)
             GPIO.output(faceRead, GPIO.LOW)
             GPIO.output(maskOff, GPIO.HIGH)
             GPIO.output(maskOn, GPIO.LOW)
+            allHaveMask = 0
 
 
         # include the probability in the label
@@ -186,6 +243,8 @@ while True:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
         #cv2.rectangle(frame, (startX, startY), (endX, endY), color, 2)
 
+    # Door Control
+    doorControl(allHaveMask == 1)
     # show the output frame
     cv2.imshow("Face Mask Detector", frame)
     key = cv2.waitKey(1) & 0xFF
