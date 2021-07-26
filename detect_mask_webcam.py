@@ -54,7 +54,7 @@ GPIO.output(Motor1E, GPIO.LOW)
 #readyLEDStatus = 0
 doorIsOpen = 0          # 0: Closed, 1: Open
 
-def doorControl(open):
+def doorControl(open, faceDetected):
     global doorIsOpen
     if open and not doorIsOpen:
 
@@ -69,7 +69,8 @@ def doorControl(open):
         doorIsOpen = 1
 
     elif not open and doorIsOpen:
-        sleep(4) # delay in closing
+        if(not faceDetected):
+            sleep(4)  # delay in closing until person passes inside
         print('Door closing\n')
         GPIO.output(Motor1A, GPIO.LOW)
         GPIO.output(Motor1B, GPIO.HIGH)
@@ -161,7 +162,7 @@ def detect_and_predict_mask(frame, faceNet, maskNet):
 
         # check if door is open
         if doorIsOpen:
-            doorControl(0)  # close the door
+            doorControl(0, 0)  # close the door
 
     # return a 2-tuple of the face locations and their corresponding
     # locations
@@ -249,7 +250,7 @@ while True:
         #cv2.rectangle(frame, (startX, startY), (endX, endY), color, 2)
 
     # Door Control
-    doorControl(allHaveMask == 1)
+    doorControl(allHaveMask == 1, allHaveMask != -1)
     # show the output frame
     cv2.imshow("Face Mask Detector", frame)
     key = cv2.waitKey(1) & 0xFF
