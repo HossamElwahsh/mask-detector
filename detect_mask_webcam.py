@@ -10,6 +10,7 @@ import cv2
 import os
 import RPi.GPIO as GPIO
 from time import sleep
+from threading import Thread
 
 # Pins in GPIO.BOARD
 # ready = 8
@@ -24,8 +25,8 @@ maskOn = 4      # green
 maskOff = 2     # red
 
 # Pins for Motor Driver Inputs in GPIO.BCM
-Motor1A = 23
-Motor1B = 24
+Motor1A = 24
+Motor1B = 23
 Motor1E = 25
 
 # GPIO Setup
@@ -50,8 +51,7 @@ GPIO.output(Motor1A, GPIO.LOW)
 GPIO.output(Motor1B, GPIO.LOW)
 GPIO.output(Motor1E, GPIO.LOW)
 
-lastMaskStatus = 0      # Used to prevent duplicate door open/close
-readyLEDStatus = 0
+#readyLEDStatus = 0
 doorIsOpen = 0          # 0: Closed, 1: Open
 
 def doorControl(open):
@@ -63,21 +63,33 @@ def doorControl(open):
         GPIO.output(Motor1A, GPIO.HIGH)
         GPIO.output(Motor1B, GPIO.LOW)
         GPIO.output(Motor1E, GPIO.HIGH)
-        sleep(2)
+        sleep(3)
         print('Opened\n')
         GPIO.output(Motor1E, GPIO.LOW)
         doorIsOpen = 1
 
     elif not open and doorIsOpen:
+        sleep(4) # delay in closing
         print('Door closing\n')
         GPIO.output(Motor1A, GPIO.LOW)
         GPIO.output(Motor1B, GPIO.HIGH)
         GPIO.output(Motor1E, GPIO.HIGH)
+        sleep(3)
         print('Closed\n')
         GPIO.output(Motor1E, GPIO.LOW)
         doorIsOpen = 0
     return
-
+    
+    
+# toggle function for read LED
+def toggleReadLed():
+    while True:
+        GPIO.output(ready, GPIO.HIGH)
+        sleep(1)
+        GPIO.output(ready, GPIO.LOW)
+        sleep(1)
+    # blink led
+        
 def detect_and_predict_mask(frame, faceNet, maskNet):
     # grab the dimensions of the frame and then construct a blob
     # from it
@@ -156,16 +168,6 @@ def detect_and_predict_mask(frame, faceNet, maskNet):
     return (locs, preds)
 
 
-# toggle function for read LED
-def toggleReadLed(LEDStatus):
-    if(LEDStatus == 0):
-        LEDStatus = 1
-        GPIO.output(ready, GPIO.HIGH)
-    else:
-        LEDStatus = 0
-        GPIO.output(ready, GPIO.LOW)
-
-    return LEDStatus
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -195,9 +197,12 @@ print("[INFO] starting video stream...")
 vs = VideoStream(src=0).start()
 time.sleep(2.0)
 
+# blink ready LED
+th = Thread(target=toggleReadLed)
+th.start()
+
 # loop over the frames from the video stream
 while True:
-    readyLEDStatus = toggleReadLed(readyLEDStatus)
 
     # grab the frame from the threaded video stream and resize it
     # to have a maximum width of 400 pixels
