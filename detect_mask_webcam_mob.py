@@ -29,17 +29,6 @@ Motor1A = 24
 Motor1B = 23
 Motor1E = 25
 
-# 7 segment pins
-A1 = 8
-B1 = 7
-C1 = 1
-D1 = 16
-
-A2 = 11
-B2 = 5
-C2 = 6
-D2 = 26
-
 # GPIO Setup
 GPIO.setmode(GPIO.BCM)
 
@@ -52,16 +41,6 @@ GPIO.setup(maskOff, GPIO.OUT)
 GPIO.setup(Motor1A, GPIO.OUT)   # All pins as Outputs
 GPIO.setup(Motor1B, GPIO.OUT)
 GPIO.setup(Motor1E, GPIO.OUT)
-# 7 segment setup
-GPIO.setup(A1, GPIO.OUT)
-GPIO.setup(B1, GPIO.OUT)
-GPIO.setup(C1, GPIO.OUT)
-GPIO.setup(D1, GPIO.OUT)
-
-GPIO.setup(A2, GPIO.OUT)
-GPIO.setup(B2, GPIO.OUT)
-GPIO.setup(C2, GPIO.OUT)
-GPIO.setup(D2, GPIO.OUT)
 
 # startup output
 GPIO.output(faceRead, GPIO.LOW)
@@ -70,15 +49,7 @@ GPIO.output(maskOff, GPIO.LOW)
 # ------------------------------
 GPIO.output(Motor1A, GPIO.LOW)
 GPIO.output(Motor1B, GPIO.LOW)
-
-GPIO.output(A1, GPIO.HIGH)
-GPIO.output(B1, GPIO.LOW)
-GPIO.output(C1, GPIO.LOW)
-GPIO.output(D1, GPIO.LOW)
-GPIO.output(A2, GPIO.HIGH)
-GPIO.output(B2, GPIO.LOW)
-GPIO.output(C2, GPIO.LOW)
-GPIO.output(D2, GPIO.LOW)
+GPIO.output(Motor1E, GPIO.LOW)
 
 #readyLEDStatus = 0
 doorIsOpen = 0          # 0: Closed, 1: Open
@@ -153,8 +124,8 @@ def detect_and_predict_mask(frame, faceNet, maskNet):
 
             # ensure the bounding boxes fall within the dimensions of
             # the frame
-            (startX, startY) = (max(0, startX), max(0, startY))
-            (endX, endY) = (min(w - 1, endX), min(h - 1, endY))
+            #(startX, startY) = (max(0, startX), max(0, startY))
+            #(endX, endY) = (min(w - 1, endX), min(h - 1, endY))
 
             # extract the face ROI, convert it from BGR to RGB channel
             # ordering, resize it to 224x224, and preprocess it
@@ -272,28 +243,25 @@ while True:
         # include the probability in the label
         label = "{}: {:.2f}%".format(label, max(mask, withoutMask) * 100)
 
-        # 7 seg
-        # switch(str(max(mask, withoutMask))[1])
-        #     case "0":
-        # break;
-
         # display the label and bounding box rectangle on the output
         # frame
         cv2.putText(frame, label, (startX - 50, startY - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-        cv2.putText(frame, label, (startX - 50, endY + 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-        cv2.rectangle(frame, (startX, startY), (endX, endY), color, 2)
+        #cv2.rectangle(frame, (startX, startY), (endX, endY), color, 2)
 
     # Door Control
     doorControl(allHaveMask == 1, allHaveMask != -1)
     # show the output frame
     #try:
-    cv2.imshow("Face Mask Detector", frame)
-    key = cv2.waitKey(1) & 0xFF
+    #    cv2.imshow("Face Mask Detector", frame)
+    #    key = cv2.waitKey(1) & 0xFF
         # if the `q` key was pressed, break from the loop
-    if key == ord("q"):
-        break
+    #    if key == ord("q"):
+    #        break
+    #except cv2.error as error:
+    #    pass
+        #print("[Error]: {}".format(error))
+
     
     #sleep(0.001)
     
