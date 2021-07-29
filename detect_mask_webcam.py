@@ -1,3 +1,5 @@
+from math import trunc
+
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.models import load_model
@@ -71,11 +73,12 @@ GPIO.output(maskOff, GPIO.LOW)
 GPIO.output(Motor1A, GPIO.LOW)
 GPIO.output(Motor1B, GPIO.LOW)
 
-GPIO.output(A1, GPIO.HIGH)
+GPIO.output(A1, GPIO.LOW)
 GPIO.output(B1, GPIO.LOW)
 GPIO.output(C1, GPIO.LOW)
 GPIO.output(D1, GPIO.LOW)
-GPIO.output(A2, GPIO.HIGH)
+
+GPIO.output(A2, GPIO.LOW)
 GPIO.output(B2, GPIO.LOW)
 GPIO.output(C2, GPIO.LOW)
 GPIO.output(D2, GPIO.LOW)
@@ -110,7 +113,50 @@ def doorControl(open, faceDetected):
         doorIsOpen = 0
     return
     
-    
+def showOn7Segment(A, B, C, D, digitPlace):
+    if(digitPlace == 0):
+        GPIO.output(A1, A)
+        GPIO.output(B1, B)
+        GPIO.output(C1, C)
+        GPIO.output(D1, D)
+    else:
+        GPIO.output(A2, A)
+        GPIO.output(B2, B)
+        GPIO.output(C2, C)
+        GPIO.output(D2, D)
+
+def segmentMatcher(digit, digitPlace):
+    if(digit == 0):
+        showOn7Segment(0, 0, 0, 0, digitPlace)
+
+    elif(digit == 1):
+        showOn7Segment(0, 0, 0, 1, digitPlace)
+
+    elif(digit == 2):
+        showOn7Segment(0, 0, 1, 0, digitPlace)
+
+    elif(digit == 3):
+        showOn7Segment(0, 0, 1, 1, digitPlace)
+
+    elif(digit == 4):
+        showOn7Segment(0, 1, 0, 0, digitPlace)
+
+    elif(digit == 5):
+        showOn7Segment(0, 1, 0, 1, digitPlace)
+
+    elif(digit == 6):
+        showOn7Segment(0, 1, 1, 0, digitPlace)
+
+    elif(digit == 7):
+        showOn7Segment(0, 1, 1, 1, digitPlace)
+
+    elif(digit == 8):
+        showOn7Segment(1, 0, 0, 0, digitPlace)
+
+    elif(digit == 9):
+        showOn7Segment(1, 0, 0, 1, digitPlace)
+
+
 # toggle function for read LED
 def toggleReadLed():
     while True:
@@ -119,7 +165,8 @@ def toggleReadLed():
         GPIO.output(ready, GPIO.LOW)
         sleep(1)
     # blink led
-        
+
+
 def detect_and_predict_mask(frame, faceNet, maskNet):
     # grab the dimensions of the frame and then construct a blob
     # from it
@@ -270,7 +317,18 @@ while True:
 
 
         # include the probability in the label
-        label = "{}: {:.2f}%".format(label, max(mask, withoutMask) * 100)
+        maxPerc = max(mask, withoutMask) * 100
+        label = "{}: {:.2f}%".format(label, maxPerc)
+
+        sevenSegDigits = trunc(maxPerc)
+        unitDigit = str(sevenSegDigits)[0]
+        tensDigit = str(sevenSegDigits)[1]
+
+        segmentMatcher(unitDigit, 0)
+        segmentMatcher(tensDigit, 1)
+
+
+
 
         # 7 seg
         # switch(str(max(mask, withoutMask))[1])

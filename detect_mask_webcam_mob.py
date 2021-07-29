@@ -1,3 +1,5 @@
+from math import trunc
+
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.models import load_model
@@ -29,6 +31,18 @@ Motor1A = 24
 Motor1B = 23
 Motor1E = 25
 
+# 7 segment pins
+A1 = 8
+B1 = 7
+C1 = 1
+D1 = 16
+
+A2 = 11
+B2 = 5
+C2 = 6
+D2 = 26
+
+
 # GPIO Setup
 GPIO.setmode(GPIO.BCM)
 
@@ -42,6 +56,18 @@ GPIO.setup(Motor1A, GPIO.OUT)   # All pins as Outputs
 GPIO.setup(Motor1B, GPIO.OUT)
 GPIO.setup(Motor1E, GPIO.OUT)
 
+# 7 segment setup
+GPIO.setup(A1, GPIO.OUT)
+GPIO.setup(B1, GPIO.OUT)
+GPIO.setup(C1, GPIO.OUT)
+GPIO.setup(D1, GPIO.OUT)
+
+GPIO.setup(A2, GPIO.OUT)
+GPIO.setup(B2, GPIO.OUT)
+GPIO.setup(C2, GPIO.OUT)
+GPIO.setup(D2, GPIO.OUT)
+
+
 # startup output
 GPIO.output(faceRead, GPIO.LOW)
 GPIO.output(maskOn, GPIO.LOW)
@@ -50,6 +76,17 @@ GPIO.output(maskOff, GPIO.LOW)
 GPIO.output(Motor1A, GPIO.LOW)
 GPIO.output(Motor1B, GPIO.LOW)
 GPIO.output(Motor1E, GPIO.LOW)
+
+
+GPIO.output(A1, GPIO.LOW)
+GPIO.output(B1, GPIO.LOW)
+GPIO.output(C1, GPIO.LOW)
+GPIO.output(D1, GPIO.LOW)
+GPIO.output(A2, GPIO.LOW)
+GPIO.output(B2, GPIO.LOW)
+GPIO.output(C2, GPIO.LOW)
+GPIO.output(D2, GPIO.LOW)
+
 
 #readyLEDStatus = 0
 doorIsOpen = 0          # 0: Closed, 1: Open
@@ -80,8 +117,50 @@ def doorControl(open, faceDetected):
         GPIO.output(Motor1E, GPIO.LOW)
         doorIsOpen = 0
     return
-    
-    
+
+def showOn7Segment(A, B, C, D, digitPlace):
+    if(digitPlace == 1):
+        GPIO.output(A1, A)
+        GPIO.output(B1, B)
+        GPIO.output(C1, C)
+        GPIO.output(D1, D)
+    else:
+        GPIO.output(A2, A)
+        GPIO.output(B2, B)
+        GPIO.output(C2, C)
+        GPIO.output(D2, D)
+
+def segmentMatcher(digit, digitPlace):
+    if (digit == 0):
+        showOn7Segment(0, 0, 0, 0, digitPlace)
+
+    elif (digit == 1):
+        showOn7Segment(0, 0, 0, 1, digitPlace)
+
+    elif (digit == 2):
+        showOn7Segment(0, 0, 1, 0, digitPlace)
+
+    elif (digit == 3):
+        showOn7Segment(0, 0, 1, 1, digitPlace)
+
+    elif (digit == 4):
+        showOn7Segment(0, 1, 0, 0, digitPlace)
+
+    elif (digit == 5):
+        showOn7Segment(0, 1, 0, 1, digitPlace)
+
+    elif (digit == 6):
+        showOn7Segment(0, 1, 1, 0, digitPlace)
+
+    elif (digit == 7):
+        showOn7Segment(0, 1, 1, 1, digitPlace)
+
+    elif (digit == 8):
+        showOn7Segment(1, 0, 0, 0, digitPlace)
+
+    elif (digit == 9):
+        showOn7Segment(1, 0, 0, 1, digitPlace)
+
 # toggle function for read LED
 def toggleReadLed():
     while True:
@@ -241,7 +320,15 @@ while True:
 
 
         # include the probability in the label
-        label = "{}: {:.2f}%".format(label, max(mask, withoutMask) * 100)
+        maxPerc = max(mask, withoutMask) * 100
+        label = "{}: {:.2f}%".format(label, maxPerc)
+
+        sevenSegDigits = trunc(maxPerc)
+        unitDigit = str(sevenSegDigits)[0]
+        tensDigit = str(sevenSegDigits)[1]
+
+        segmentMatcher(unitDigit, 0)
+        segmentMatcher(tensDigit, 1)
 
         # display the label and bounding box rectangle on the output
         # frame
